@@ -1,6 +1,7 @@
 ﻿using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Security;
+using System.Web;
 
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
@@ -38,3 +39,4 @@ using System.Security;
 [assembly: AssemblyVersion("1.7")]
 [assembly: AssemblyFileVersion("1.7")]
 
+//[assembly: PreApplicationStartMethod(typeof(Microsoft.Owin.Host.SystemWeb.PreApplicationStart), "Initialize")]

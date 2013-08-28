@@ -1,12 +1,16 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using System.Web;
 using System.Web.Mvc;
 using System.Web.Routing;
 using System.Web.SessionState;
+using Microsoft.Owin.Host.SystemWeb;
 using Orchard.Environment;
 using Orchard.Environment.Configuration;
 using Orchard.Mvc.Extensions;
+using Owin;
 
 namespace Orchard.Mvc.Routes {
 
@@ -15,12 +19,14 @@ namespace Orchard.Mvc.Routes {
         private readonly ShellSettings _shellSettings;
         private readonly IWorkContextAccessor _workContextAccessor;
         private readonly IRunningShellTable _runningShellTable;
+        private readonly Func<IDictionary<string, object>, Task> _env;
         private readonly UrlPrefix _urlPrefix;
 
-        public ShellRoute(RouteBase route, ShellSettings shellSettings, IWorkContextAccessor workContextAccessor, IRunningShellTable runningShellTable) {
+        public ShellRoute(RouteBase route, ShellSettings shellSettings, IWorkContextAccessor workContextAccessor, IRunningShellTable runningShellTable, Func<IDictionary<string, object>, Task> env) {
             _route = route;
             _shellSettings = shellSettings;
             _runningShellTable = runningShellTable;
+            _env = env;
             _workContextAccessor = workContextAccessor;
             if (!string.IsNullOrEmpty(_shellSettings.RequestUrlPrefix))
                 _urlPrefix = new UrlPrefix(_shellSettings.RequestUrlPrefix);
@@ -51,7 +57,7 @@ namespace Orchard.Mvc.Routes {
                 return null;
 
             // otherwise wrap handler and return it
-            routeData.RouteHandler = new RouteHandler(_workContextAccessor, routeData.RouteHandler, SessionState);
+            routeData.RouteHandler = new RouteHandler(_workContextAccessor, routeData.RouteHandler, SessionState, _env);
             routeData.DataTokens["IWorkContextAccessor"] = _workContextAccessor;
 
             if (IsHttpRoute) {
@@ -88,20 +94,24 @@ namespace Orchard.Mvc.Routes {
             private readonly IWorkContextAccessor _workContextAccessor;
             private readonly IRouteHandler _routeHandler;
             private readonly SessionStateBehavior _sessionStateBehavior;
+            private readonly Func<IDictionary<string, object>, Task> _env;
 
-            public RouteHandler(IWorkContextAccessor workContextAccessor, IRouteHandler routeHandler, SessionStateBehavior sessionStateBehavior) {
+            public RouteHandler(IWorkContextAccessor workContextAccessor, IRouteHandler routeHandler, SessionStateBehavior sessionStateBehavior, Func<IDictionary<string, object>, Task> env) {
                 _workContextAccessor = workContextAccessor;
                 _routeHandler = routeHandler;
                 _sessionStateBehavior = sessionStateBehavior;
+                _env = env;
             }
 
             public IHttpHandler GetHttpHandler(RequestContext requestContext) {
                 var httpHandler = _routeHandler.GetHttpHandler(requestContext);
+                
                 requestContext.HttpContext.SetSessionStateBehavior(_sessionStateBehavior);
                  
                 if (httpHandler is IHttpAsyncHandler) {
                     return new HttpAsyncHandler(_workContextAccessor, (IHttpAsyncHandler)httpHandler);
                 }
+
                 return new HttpHandler(_workContextAccessor, httpHandler);
             }
         }

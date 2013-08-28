@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Mvc;
 using System.Web.Routing;
@@ -31,7 +32,7 @@ namespace Orchard.Mvc.Routes {
             _extensionManager = extensionManager;
         }
 
-        public void Publish(IEnumerable<RouteDescriptor> routes) {
+        public void Publish(IEnumerable<RouteDescriptor> routes, Func<IDictionary<string, object>, Task> env) {
             var routesArray = routes
                 .OrderByDescending(r => r.Priority)
                 .ToArray();
@@ -93,7 +94,7 @@ namespace Orchard.Mvc.Routes {
                     // Route-level setting overrides module-level setting (from manifest).
                     var sessionStateBehavior = routeDescriptor.SessionState == SessionStateBehavior.Default ? defaultSessionState : routeDescriptor.SessionState ;
 
-                    var shellRoute = new ShellRoute(routeDescriptor.Route, _shellSettings, _workContextAccessor, _runningShellTable) {
+                    var shellRoute = new ShellRoute(routeDescriptor.Route, _shellSettings, _workContextAccessor, _runningShellTable, env) {
                         IsHttpRoute = routeDescriptor is HttpRouteDescriptor,
                         SessionState = sessionStateBehavior
                     };
