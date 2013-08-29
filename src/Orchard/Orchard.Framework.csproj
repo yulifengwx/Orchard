@@ -86,12 +86,12 @@
       <HintPath>..\..\lib\log4net\log4net.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.CSharp" />
-    <Reference Include="Microsoft.Owin.Host.SystemWeb">
-      <HintPath>..\packages\Microsoft.Owin.Host.SystemWeb.1.0.1\lib\net45\Microsoft.Owin.Host.SystemWeb.dll</HintPath>
+    <Reference Include="Microsoft.Owin">
+      <HintPath>..\packages\Microsoft.Owin.2.0.0-rtw2-20828-597-dev\lib\net45\Microsoft.Owin.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.Web.Infrastructure, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <Private>True</Private>
-      <HintPath>..\packages\Microsoft.Web.Infrastructure.1.0.0.0\lib\net40\Microsoft.Web.Infrastructure.dll</HintPath>
+    <Reference Include="Microsoft.Owin.Host.SystemWeb, Version=2.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Microsoft.Owin.Host.SystemWeb.2.0.0-rtw2-20828-597-dev\lib\net45\Microsoft.Owin.Host.SystemWeb.dll</HintPath>
     </Reference>
     <Reference Include="Newtonsoft.Json">
       <HintPath>..\..\lib\newtonsoft.json\Newtonsoft.Json.dll</HintPath>
@@ -108,17 +108,9 @@
     <Reference Include="NHibernate.SqlAzure">
       <HintPath>..\..\lib\nhibernate.sqlazure\NHibernate.SqlAzure.dll</HintPath>
     </Reference>
-    <Reference Include="Owin">
+    <Reference Include="Owin, Version=1.0.0.0, Culture=neutral, PublicKeyToken=f0ebd12fd5e55cc5, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\Owin.1.0\lib\net40\Owin.dll</HintPath>
-    </Reference>
-    <Reference Include="Owin.Builder">
-      <HintPath>..\packages\Owin.Builder.0.8.5\lib\net40\Owin.Builder.dll</HintPath>
-    </Reference>
-    <Reference Include="Owin.Extensions">
-      <HintPath>..\packages\Owin.Extensions.0.8.5\lib\net40\Owin.Extensions.dll</HintPath>
-    </Reference>
-    <Reference Include="Owin.Types">
-      <HintPath>..\packages\Owin.Types.0.8.5\lib\net40\Owin.Types.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.DataAnnotations">
@@ -301,7 +293,9 @@
     <Compile Include="Mvc\ViewEngines\Razor\IRazorCompilationEvents.cs" />
     <Compile Include="Mvc\ViewEngines\ThemeAwareness\ThemeViewLocationCache.cs" />
     <Compile Include="OrchardFatalException.cs" />
-    <Compile Include="Owin\HelloOrchardMiddleware.cs" />
+    <Compile Include="Owin\IOwinMiddlewareProvider.cs" />
+    <Compile Include="Owin\OrchardMiddleware.cs" />
+    <Compile Include="Owin\Startup.cs" />
     <Compile Include="Recipes\Events\IRecipeExecuteEventHandler.cs" />
     <Compile Include="Recipes\Events\IRecipeSchedulerEventHandler.cs" />
     <Compile Include="Recipes\Models\Recipe.cs" />

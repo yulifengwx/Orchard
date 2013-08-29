@@ -1,16 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Web;
 using System.Web.Mvc;
 using System.Web.Routing;
 using System.Web.SessionState;
-using Microsoft.Owin.Host.SystemWeb;
 using Orchard.Environment;
 using Orchard.Environment.Configuration;
 using Orchard.Mvc.Extensions;
-using Owin;
 
 namespace Orchard.Mvc.Routes {
 
@@ -19,14 +16,14 @@ namespace Orchard.Mvc.Routes {
         private readonly ShellSettings _shellSettings;
         private readonly IWorkContextAccessor _workContextAccessor;
         private readonly IRunningShellTable _runningShellTable;
-        private readonly Func<IDictionary<string, object>, Task> _env;
+        private readonly Func<IDictionary<string, object>, Task> _pipeline;
         private readonly UrlPrefix _urlPrefix;
 
-        public ShellRoute(RouteBase route, ShellSettings shellSettings, IWorkContextAccessor workContextAccessor, IRunningShellTable runningShellTable, Func<IDictionary<string, object>, Task> env) {
+        public ShellRoute(RouteBase route, ShellSettings shellSettings, IWorkContextAccessor workContextAccessor, IRunningShellTable runningShellTable, Func<IDictionary<string, object>, Task> pipeline) {
             _route = route;
             _shellSettings = shellSettings;
             _runningShellTable = runningShellTable;
-            _env = env;
+            _pipeline = pipeline;
             _workContextAccessor = workContextAccessor;
             if (!string.IsNullOrEmpty(_shellSettings.RequestUrlPrefix))
                 _urlPrefix = new UrlPrefix(_shellSettings.RequestUrlPrefix);
@@ -57,7 +54,7 @@ namespace Orchard.Mvc.Routes {
                 return null;
 
             // otherwise wrap handler and return it
-            routeData.RouteHandler = new RouteHandler(_workContextAccessor, routeData.RouteHandler, SessionState, _env);
+            routeData.RouteHandler = new RouteHandler(_workContextAccessor, routeData.RouteHandler, SessionState, _pipeline);
             routeData.DataTokens["IWorkContextAccessor"] = _workContextAccessor;
 
             if (IsHttpRoute) {
@@ -94,13 +91,13 @@ namespace Orchard.Mvc.Routes {
             private readonly IWorkContextAccessor _workContextAccessor;
             private readonly IRouteHandler _routeHandler;
             private readonly SessionStateBehavior _sessionStateBehavior;
-            private readonly Func<IDictionary<string, object>, Task> _env;
+            private readonly Func<IDictionary<string, object>, Task> _pipeline;
 
-            public RouteHandler(IWorkContextAccessor workContextAccessor, IRouteHandler routeHandler, SessionStateBehavior sessionStateBehavior, Func<IDictionary<string, object>, Task> env) {
+            public RouteHandler(IWorkContextAccessor workContextAccessor, IRouteHandler routeHandler, SessionStateBehavior sessionStateBehavior, Func<IDictionary<string, object>, Task> pipeline) {
                 _workContextAccessor = workContextAccessor;
                 _routeHandler = routeHandler;
                 _sessionStateBehavior = sessionStateBehavior;
-                _env = env;
+                _pipeline = pipeline;
             }
 
             public IHttpHandler GetHttpHandler(RequestContext requestContext) {
@@ -109,7 +106,7 @@ namespace Orchard.Mvc.Routes {
                 requestContext.HttpContext.SetSessionStateBehavior(_sessionStateBehavior);
                  
                 if (httpHandler is IHttpAsyncHandler) {
-                    return new HttpAsyncHandler(_workContextAccessor, (IHttpAsyncHandler)httpHandler);
+                    return new HttpAsyncHandler(_workContextAccessor, httpHandler, _pipeline);
                 }
 
                 return new HttpHandler(_workContextAccessor, httpHandler);
@@ -117,7 +114,7 @@ namespace Orchard.Mvc.Routes {
         }
 
         class HttpHandler : IHttpHandler, IRequiresSessionState, IHasRequestContext {
-            protected readonly IWorkContextAccessor _workContextAccessor;
+            private readonly IWorkContextAccessor _workContextAccessor;
             private readonly IHttpHandler _httpHandler;
 
             public HttpHandler(IWorkContextAccessor workContextAccessor, IHttpHandler httpHandler) {
@@ -143,33 +140,43 @@ namespace Orchard.Mvc.Routes {
             }
         }
 
-        class HttpAsyncHandler : HttpHandler, IHttpAsyncHandler {
+        class HttpAsyncHandler : HttpTaskAsyncHandler {
+            private readonly IWorkContextAccessor _workContextAccessor;
+            private readonly IHttpHandler _httpHandler;
             private readonly IHttpAsyncHandler _httpAsyncHandler;
+            private readonly Func<IDictionary<string, object>, Task> pipeline;
             private IDisposable _scope;
 
-            public HttpAsyncHandler(IWorkContextAccessor containerProvider, IHttpAsyncHandler httpAsyncHandler)
-                : base(containerProvider, httpAsyncHandler) {
-                _httpAsyncHandler = httpAsyncHandler;
+            public HttpAsyncHandler(IWorkContextAccessor workContextAccessor, IHttpHandler httpHandler, Func<IDictionary<string, object>, Task> env)
+            {
+                _workContextAccessor = workContextAccessor;
+                _httpHandler = httpHandler;
+                _httpAsyncHandler = httpHandler as IHttpAsyncHandler;
+                pipeline = env;
             }
 
-            public IAsyncResult BeginProcessRequest(HttpContext context, AsyncCallback cb, object extraData) {
-                _scope = _workContextAccessor.CreateWorkContextScope(new HttpContextWrapper(context));
-                try {
-                    return _httpAsyncHandler.BeginProcessRequest(context, cb, extraData);
-                }
-                catch {
-                    _scope.Dispose();
-                    throw;
-                }
+            public override void ProcessRequest(HttpContext context) {
+                throw new NotImplementedException();
             }
 
-            [DebuggerStepThrough]
-            public void EndProcessRequest(IAsyncResult result) {
-                try {
-                    _httpAsyncHandler.EndProcessRequest(result);
-                }
-                finally {
-                    _scope.Dispose();
+            public override async Task ProcessRequestAsync(HttpContext context) {
+                using (_scope = _workContextAccessor.CreateWorkContextScope(new HttpContextWrapper(context))) {
+
+                    var environment = context.Items["owin.Environment"] as IDictionary<string, object>;
+
+                    if (environment == null) {
+                        throw new ArgumentException("owin.Environment can't be null");
+                    }
+
+                    environment["orchard.Handler"] = new Func<Task>(async () => {
+                        await Task.Factory.FromAsync(
+                            _httpAsyncHandler.BeginProcessRequest,
+                            _httpAsyncHandler.EndProcessRequest,
+                            context,
+                            null);
+                    });
+
+                    await pipeline.Invoke(environment);
                 }
             }
         }

@@ -53,6 +53,14 @@
       <HintPath>..\..\..\..\lib\autofac\Autofac.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.CSharp" />
+    <Reference Include="Microsoft.Owin, Version=2.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\packages\Microsoft.Owin.2.0.0-rtw2-20828-597-dev\lib\net45\Microsoft.Owin.dll</HintPath>
+    </Reference>
+    <Reference Include="Owin, Version=1.0.0.0, Culture=neutral, PublicKeyToken=f0ebd12fd5e55cc5, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Orchard.Users\bin\Owin.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
     <Reference Include="System.ComponentModel.DataAnnotations">
@@ -104,6 +112,7 @@
     <Compile Include="Models\CacheSettingsPart.cs" />
     <Compile Include="Models\CacheSettingsPartRecord.cs" />
     <Compile Include="Models\CacheParameterRecord.cs" />
+    <Compile Include="Owin\OutputCacheMiddleware.cs" />
     <Compile Include="Services\CacheService.cs" />
     <Compile Include="Services\DefaultTagCache.cs" />
     <Compile Include="Services\IDisplayedContentItemHandler.cs" />

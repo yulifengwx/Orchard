@@ -38,5 +38,3 @@ using System.Web;
 
 [assembly: AssemblyVersion("1.7")]
 [assembly: AssemblyFileVersion("1.7")]
-
-//[assembly: PreApplicationStartMethod(typeof(Microsoft.Owin.Host.SystemWeb.PreApplicationStart), "Initialize")]

@@ -3,14 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Autofac.Features.OwnedInstances;
+using Microsoft.Owin.Builder;
 using Orchard.Logging;
 using Orchard.Mvc.ModelBinders;
 using Orchard.Mvc.Routes;
 using Orchard.Owin;
 using Orchard.Tasks;
+using Orchard.UI;
 using Orchard.WebApi.Routes;
 using Owin;
-using Owin.Builder;
 using IModelBinderProvider = Orchard.Mvc.ModelBinders.IModelBinderProvider;
 
 namespace Orchard.Environment {
@@ -22,6 +23,7 @@ namespace Orchard.Environment {
         private readonly IEnumerable<IModelBinderProvider> _modelBinderProviders;
         private readonly IModelBinderPublisher _modelBinderPublisher;
         private readonly ISweepGenerator _sweepGenerator;
+        private readonly IEnumerable<IOwinMiddlewareProvider> _owinMiddlewareProviders;
 
         public DefaultOrchardShell(
             Func<Owned<IOrchardShellEvents>> eventsFactory,
@@ -30,7 +32,8 @@ namespace Orchard.Environment {
             IRoutePublisher routePublisher,
             IEnumerable<IModelBinderProvider> modelBinderProviders,
             IModelBinderPublisher modelBinderPublisher,
-            ISweepGenerator sweepGenerator) {
+            ISweepGenerator sweepGenerator,
+            IEnumerable<IOwinMiddlewareProvider> owinMiddlewareProviders) {
             _eventsFactory = eventsFactory;
             _routeProviders = routeProviders;
             _httpRouteProviders = httpRouteProviders;
@@ -38,6 +41,7 @@ namespace Orchard.Environment {
             _modelBinderProviders = modelBinderProviders;
             _modelBinderPublisher = modelBinderPublisher;
             _sweepGenerator = sweepGenerator;
+            _owinMiddlewareProviders = owinMiddlewareProviders;
 
             Logger = NullLogger.Instance;
         }
@@ -45,24 +49,29 @@ namespace Orchard.Environment {
         public ILogger Logger { get; set; }
 
         public void Activate() {
-            IAppBuilder app = new AppBuilder(new Dictionary<Tuple<Type, Type>, Delegate>(), new Dictionary<string, object>());
 
-            // todo: use a dedicated event to register middlewares, right now, hard code some of them
-            app.UseHelloOrchard();
+            IAppBuilder appBuilder = new AppBuilder();
 
-            Func<IDictionary<string, object>, Task> env = app.Build();
+            var orderedMiddlewares = _owinMiddlewareProviders.OrderBy(obj => obj.Position, new FlatPositionComparer());
+            foreach (var middlewareProvider in orderedMiddlewares) {
+                middlewareProvider.Register(appBuilder);
+            }
+
+            // register the Orchard middleware after all others
+            appBuilder.UseOrchard();
+
+            Func<IDictionary<string, object>, Task> pipeline = appBuilder.Build();
 
             var allRoutes = new List<RouteDescriptor>();
             allRoutes.AddRange(_routeProviders.SelectMany(provider => provider.GetRoutes()));
             allRoutes.AddRange(_httpRouteProviders.SelectMany(provider => provider.GetRoutes()));
 
-            _routePublisher.Publish(allRoutes, env);
+            _routePublisher.Publish(allRoutes, pipeline);
             _modelBinderPublisher.Publish(_modelBinderProviders.SelectMany(provider => provider.GetModelBinders()));
 
             using (var events = _eventsFactory()) {
                 events.Value.Activated();
             }
-
 
             _sweepGenerator.Activate();
         }

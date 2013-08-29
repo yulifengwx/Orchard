@@ -162,6 +162,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Modules.Deprecated", "Modul
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Orchard.AzureBlobStorage", "Orchard.Web\Modules\Orchard.AzureBlobStorage\Orchard.AzureBlobStorage.csproj", "{CBC7993C-57D8-4A6C-992C-19E849DFE71D}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{B564780F-3636-41EB-93FC-006DE1A8CC87}"
+	ProjectSection(SolutionItems) = preProject
+		.nuget\packages.config = .nuget\packages.config
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		CodeCoverage|Any CPU = CodeCoverage|Any CPU
