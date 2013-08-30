@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Security.Claims;
 using System.Text.RegularExpressions; 
 using System.Diagnostics.CodeAnalysis;
+using System.Web;
 using Orchard.Core.Settings.Models;
 using Orchard.Localization;
 using System.Web.Mvc;
@@ -85,6 +87,7 @@ namespace Orchard.Users.Controllers {
             }
 
             _authenticationService.SignIn(user, rememberMe);
+
             _userEventHandler.LoggedIn(user);
 
             return this.RedirectLocal(returnUrl);

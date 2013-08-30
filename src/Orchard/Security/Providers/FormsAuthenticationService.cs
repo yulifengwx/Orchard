@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Security.Claims;
+using System.Threading.Tasks;
 using System.Web;
 using System.Web.Security;
+using Microsoft.AspNet.Identity;
 using Orchard.Environment.Configuration;
 using Orchard.Logging;
 using Orchard.ContentManagement;
@@ -32,56 +35,84 @@ namespace Orchard.Security.Providers {
         public TimeSpan ExpirationTimeSpan { get; set; }
 
         public void SignIn(IUser user, bool createPersistentCookie) {
-            var now = _clock.UtcNow.ToLocalTime();
-            var userData = Convert.ToString(user.Id);
 
-            var ticket = new FormsAuthenticationTicket(
-                1 /*version*/,
-                user.UserName,
-                now,
-                now.Add(ExpirationTimeSpan),
-                createPersistentCookie,
-                userData,
-                FormsAuthentication.FormsCookiePath);
+            //var now = _clock.UtcNow.ToLocalTime();
+            //var userData = Convert.ToString(user.Id);
 
-            var encryptedTicket = FormsAuthentication.Encrypt(ticket);
+            //var ticket = new FormsAuthenticationTicket(
+            //    1 /*version*/,
+            //    user.UserName,
+            //    now,
+            //    now.Add(ExpirationTimeSpan),
+            //    createPersistentCookie,
+            //    userData,
+            //    FormsAuthentication.FormsCookiePath);
 
-            var cookie = new HttpCookie(FormsAuthentication.FormsCookieName, encryptedTicket) {
-                HttpOnly = true, 
-                Secure = FormsAuthentication.RequireSSL, 
-                Path = FormsAuthentication.FormsCookiePath
-            };
+            //var encryptedTicket = FormsAuthentication.Encrypt(ticket);
 
-            var httpContext = _httpContextAccessor.Current();
+            //var cookie = new HttpCookie(FormsAuthentication.FormsCookieName, encryptedTicket) {
+            //    HttpOnly = true, 
+            //    Secure = FormsAuthentication.RequireSSL, 
+            //    Path = FormsAuthentication.FormsCookiePath
+            //};
 
-            if (!String.IsNullOrEmpty(_settings.RequestUrlPrefix)) {
-                var cookiePath = httpContext.Request.ApplicationPath;
-                if (cookiePath != null && cookiePath.Length > 1) {
-                    cookiePath += '/';
-                }
+            //var httpContext = _httpContextAccessor.Current();
 
-                cookiePath += _settings.RequestUrlPrefix;
-                cookie.Path = cookiePath;
-            }
+            //if (!String.IsNullOrEmpty(_settings.RequestUrlPrefix)) {
+            //    var cookiePath = httpContext.Request.ApplicationPath;
+            //    if (cookiePath != null && cookiePath.Length > 1) {
+            //        cookiePath += '/';
+            //    }
 
-            if (FormsAuthentication.CookieDomain != null) {
-                cookie.Domain = FormsAuthentication.CookieDomain;
-            }
+            //    cookiePath += _settings.RequestUrlPrefix;
+            //    cookie.Path = cookiePath;
+            //}
 
-            if (createPersistentCookie) {
-                cookie.Expires = ticket.Expiration;
-            }
+            //if (FormsAuthentication.CookieDomain != null) {
+            //    cookie.Domain = FormsAuthentication.CookieDomain;
+            //}
+
+            //if (createPersistentCookie) {
+            //    cookie.Expires = ticket.Expiration;
+            //}
             
-            httpContext.Response.Cookies.Add(cookie);
+            //httpContext.Response.Cookies.Add(cookie);
 
-            _isAuthenticated = true;
-            _signedInUser = user;
+            //_isAuthenticated = true;
+            //_signedInUser = user;
+
+            // var claims = new ClaimsIdentity(AuthenticationType.SignIn);
+
+            //var userManager = new UserManager(new IdentityManager());
+            //ClaimsIdentity cookieIdentity = await UserManager.CreateIdentityAsync(user,
+            //        DefaultAuthenticationTypes.ApplicationCookie);
+
+            //var manager = new UserManager<UserStub>(new UserStoreStub());
+
+            //var claimUser = new UserStub {
+            //    Id = user.Id.ToString(),
+            //    UserName = user.UserName
+            //};
+            
+            var claimsIdentity = new ClaimsIdentity(DefaultAuthenticationTypes.ApplicationCookie);
+            claimsIdentity.AddClaim(new Claim(ClaimTypes.NameIdentifier, user.Id.ToString(), "http://www.w3.org/2001/XMLSchema#string"));
+            claimsIdentity.AddClaim(new Claim(ClaimTypes.Name, user.UserName, "http://www.w3.org/2001/XMLSchema#string"));
+            claimsIdentity.AddClaim(new Claim("http://schemas.microsoft.com/accesscontrolservice/2010/07/claims/identityprovider", "ASP.NET Identity", "http://www.w3.org/2001/XMLSchema#string"));
+	
+            _httpContextAccessor.Current()
+                .GetOwinContext()
+                .Authentication
+                .SignIn(claimsIdentity);
         }
 
         public void SignOut() {
             _signedInUser = null;
             _isAuthenticated = false;
-            FormsAuthentication.SignOut();
+
+            _httpContextAccessor.Current()
+                .GetOwinContext()
+                .Authentication
+                .SignOut(DefaultAuthenticationTypes.ApplicationCookie);
         }
 
         public void SetAuthenticatedUserForRequest(IUser user) {
@@ -94,17 +125,13 @@ namespace Orchard.Security.Providers {
                 return _signedInUser;
 
             var httpContext = _httpContextAccessor.Current();
-            if (httpContext == null || !httpContext.Request.IsAuthenticated || !(httpContext.User.Identity is FormsIdentity)) {
+            if (httpContext == null || !httpContext.Request.IsAuthenticated || !(httpContext.User.Identity is ClaimsIdentity)) {
                 return null;
             }
 
-            var formsIdentity = (FormsIdentity)httpContext.User.Identity;
-            var userData = formsIdentity.Ticket.UserData;
-            int userId;
-            if (!int.TryParse(userData, out userId)) {
-                Logger.Fatal("User id not a parsable integer");
-                return null;
-            }
+            var formsIdentity = (ClaimsIdentity)httpContext.User.Identity;
+            var userId = int.Parse(formsIdentity.GetUserId());
+            
 
             _isAuthenticated = true;
             return _signedInUser = _contentManager.Get(userId).As<IUser>();

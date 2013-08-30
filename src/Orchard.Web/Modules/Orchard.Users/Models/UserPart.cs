@@ -11,7 +11,7 @@ namespace Orchard.Users.Models {
             get { return Record.UserName; }
             set { Record.UserName = value; }
         }
-
+        
         public string Email {
             get { return Record.Email; }
             set { Record.Email = value; }

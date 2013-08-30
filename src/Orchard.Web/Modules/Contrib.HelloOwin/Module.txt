@@ -1,0 +1,10 @@
+﻿Name: Contrib.HelloOwin
+AntiForgery: enabled
+Author: The Orchard Team
+Website: http://orchardproject.net
+Version: 1.0
+OrchardVersion: 1.0
+Description: Description for the module
+Features:
+    Contrib.HelloOwin:
+        Description: Description for feature Contrib.HelloOwin.

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Autofac.Features.OwnedInstances;
 using Microsoft.Owin.Builder;
+using Orchard.Environment.Configuration;
 using Orchard.Logging;
 using Orchard.Mvc.ModelBinders;
 using Orchard.Mvc.Routes;
@@ -24,6 +25,7 @@ namespace Orchard.Environment {
         private readonly IModelBinderPublisher _modelBinderPublisher;
         private readonly ISweepGenerator _sweepGenerator;
         private readonly IEnumerable<IOwinMiddlewareProvider> _owinMiddlewareProviders;
+        private readonly ShellSettings _shellSettings;
 
         public DefaultOrchardShell(
             Func<Owned<IOrchardShellEvents>> eventsFactory,
@@ -33,7 +35,8 @@ namespace Orchard.Environment {
             IEnumerable<IModelBinderProvider> modelBinderProviders,
             IModelBinderPublisher modelBinderPublisher,
             ISweepGenerator sweepGenerator,
-            IEnumerable<IOwinMiddlewareProvider> owinMiddlewareProviders) {
+            IEnumerable<IOwinMiddlewareProvider> owinMiddlewareProviders,
+            ShellSettings shellSettings) {
             _eventsFactory = eventsFactory;
             _routeProviders = routeProviders;
             _httpRouteProviders = httpRouteProviders;
@@ -42,6 +45,7 @@ namespace Orchard.Environment {
             _modelBinderPublisher = modelBinderPublisher;
             _sweepGenerator = sweepGenerator;
             _owinMiddlewareProviders = owinMiddlewareProviders;
+            _shellSettings = shellSettings;
 
             Logger = NullLogger.Instance;
         }
@@ -51,10 +55,14 @@ namespace Orchard.Environment {
         public void Activate() {
 
             IAppBuilder appBuilder = new AppBuilder();
+            appBuilder.Properties["host.AppName"] = _shellSettings.Name;
 
-            var orderedMiddlewares = _owinMiddlewareProviders.OrderBy(obj => obj.Position, new FlatPositionComparer());
-            foreach (var middlewareProvider in orderedMiddlewares) {
-                middlewareProvider.Register(appBuilder);
+            var orderedMiddlewares = _owinMiddlewareProviders
+                .SelectMany(p => p.GetOwinMiddlewares())
+                .OrderBy(obj => obj.Priority, new FlatPositionComparer());
+
+            foreach (var middleware in orderedMiddlewares) {
+                middleware.Configure(appBuilder);
             }
 
             // register the Orchard middleware after all others

@@ -13,6 +13,7 @@ using Orchard.Users.Models;
 using Orchard.Messaging.Services;
 using System.Collections.Generic;
 using Orchard.Services;
+using IUser = Orchard.Security.IUser;
 
 namespace Orchard.Users.Services {
     [UsedImplicitly]
@@ -38,6 +39,18 @@ namespace Orchard.Users.Services {
             var settings = new MembershipSettings();
             // accepting defaults
             return settings;
+        }
+
+        IUser IMembershipService.CreateUser(CreateUserParams createUserParams) {
+            return CreateUser(createUserParams);
+        }
+
+        IUser IMembershipService.GetUser(string username) {
+            return GetUser(username);
+        }
+
+        IUser IMembershipService.ValidateUser(string userNameOrEmail, string password) {
+            return ValidateUser(userNameOrEmail, password);
         }
 
         public IUser CreateUser(CreateUserParams createUserParams) {
@@ -222,5 +235,6 @@ namespace Orchard.Users.Services {
         private bool ValidatePasswordEncrypted(UserPartRecord partRecord, string password) {
             return String.Equals(password, Encoding.UTF8.GetString(_encryptionService.Decode(Convert.FromBase64String(partRecord.Password))), StringComparison.Ordinal);
         }
+
     }
 }

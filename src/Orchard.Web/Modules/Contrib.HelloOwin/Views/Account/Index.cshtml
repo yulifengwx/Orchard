@@ -1,0 +1,10 @@
+﻿@model IEnumerable<Microsoft.Owin.Security.AuthenticationDescription>
+    
+@foreach (var desc in Model) {
+    
+    using(Html.BeginFormAntiForgeryPost(Url.Action("Challenge", "Account", new { area = "Contrib.HelloOwin"})))
+    {
+        @Html.Hidden("provider", desc.AuthenticationType)
+        <button type="submit" class="primaryAction">@desc.Caption</button> 
+    }   
+}
